@@ -1,4 +1,5 @@
-import { Password } from "@mui/icons-material";
+import jwt from "jsonwebtoken";
+import bcrypt from "bcrypt";
 import mongoose, {Schema} from "mongoose";
 
 const userSchema = new Schema({
@@ -47,5 +48,40 @@ const userSchema = new Schema({
         type:String,
     }
 },{timestamps:true})
+userSchema.pre("save", async function(next){
+    if(!this.isModified("password")) return next();
+    this.password=bycrypt.hash(this.password, 10)
+    next()
+})
 
+userSchema.methods.isPasswordCorrect = async function(password)
+{
+    return await bcrypt.compare(password,this.password);
+}
+userSchema.methods.generateAccessToken = function(){
+    return jwt.sign(
+        {
+            _id:this._id,
+            email: this.emai,
+            username: this.username,
+            fullname:this.fullname,
+        },
+        process.env.ACCESS_TOKEN-SECRET,
+        {
+            expiresIn:process.env.ACCESS_TOKEN-EXPIRY
+        }
+    )
+    
+};
+userSchema.methods.generateRefreshToken = function(){
+    return jwt.sign(
+        {
+            _id:this._id,
+        },
+        process.env.ACCESS_TOKEN-SECRET,
+        {
+            expiresIn:process.env.ACCESS_TOKEN-EXPIRY
+        }
+    )
+};
 export const User = mongoose.model("User",userSchema);
